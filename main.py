@@ -1,16 +1,68 @@
-# This is a sample Python script.
+import pandas as pd
+import glob
+from fpdf import FPDF
+from pathlib import Path
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+filepaths = glob.glob("invoices/*.xlsx")
 
+for filepath in filepaths:
+    filename = Path(filepath).stem
+    invoice_nr, invoice_date = filename.split("-")
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf.add_page()
 
+    # Show invoice number
+    pdf.set_font(family="Times", size=16, style="B")
+    pdf.cell(w=50, h=8, txt=f"Invoice nr.{invoice_nr}", ln=1)
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+    # Show invoice date
+    pdf.set_font(family="Times", size=16, style="B")
+    pdf.cell(w=50, h=8, txt=f"Date {invoice_date}", ln=1)
+    pdf.ln(16)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    # Show invoice core data
+    df = pd.read_excel(filepath, sheet_name="Sheet 1")
+
+    # Show table header
+    columns = list(df.columns)
+    columns = [column.replace("_", " ").title() for column in columns]
+    pdf.set_font(family="Times", size=10, style="B")
+    pdf.set_text_color(80, 80, 80)
+    pdf.cell(w=30, h=8, txt=columns[0], border=1)
+    pdf.cell(w=70, h=8, txt=columns[1], border=1)
+    pdf.cell(w=30, h=8, txt=columns[2], border=1)
+    pdf.cell(w=30, h=8, txt=columns[3], border=1)
+    pdf.cell(w=30, h=8, txt=columns[4], border=1, ln=1)
+
+    # Show table rows
+    for index, row in df.iterrows():
+        pdf.set_font(family="Times", size=10)
+        pdf.set_text_color(80, 80, 80)
+        pdf.cell(w=30, h=8, txt=str(row["product_id"]), border=1)
+        pdf.cell(w=70, h=8, txt=row["product_name"], border=1)
+        pdf.cell(w=30, h=8, txt=str(row["amount_purchased"]), border=1)
+        pdf.cell(w=30, h=8, txt=str(row["price_per_unit"]), border=1)
+        pdf.cell(w=30, h=8, txt=str(row["total_price"]), border=1, ln=1)
+
+    # Show sum value
+    total_sum = df["total_price"].sum()
+    pdf.set_font(family="Times", size=10)
+    pdf.set_text_color(80, 80, 80)
+    pdf.cell(w=30, h=8, txt="", border=1)
+    pdf.cell(w=70, h=8, txt="", border=1)
+    pdf.cell(w=30, h=8, txt="", border=1)
+    pdf.cell(w=30, h=8, txt="", border=1)
+    pdf.cell(w=30, h=8, txt=str(total_sum), border=1, ln=1)
+    pdf.ln(10)
+
+    # Show total sum sentence
+    pdf.set_font(family="Times", size=10, style="B")
+    pdf.cell(w=30, h=8, txt=f"The total price is {total_sum}", ln=1)
+
+    # Show company name and logo
+    pdf.set_font(family="Times", size=14, style="B")
+    pdf.cell(w=25, h=8, txt=f"Kernel.id")
+    pdf.image("kernel-logo.png", w=10)
+
+    pdf.output(f"PDFs/{filename}.pdf")
